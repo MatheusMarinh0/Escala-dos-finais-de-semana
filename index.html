@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Escala de Visita</title>
+  <title>Escala da Lucimar</title>
   <style>
     * { box-sizing: border-box; }
 
@@ -244,7 +244,7 @@
   <header class="header">
     <h1>Escala da Lucimar</h1>
     <div class="rules">
-      Sempre vale o nome que estiver nesta página • Olhar sempre o próximo fim de semana
+      Sempre vale o nome que estiver nesta página • Trocas só valem após atualização do link • Olhar sempre o próximo fim de semana
     </div>
   </header>
 
@@ -252,9 +252,9 @@
     <h2 class="section-title">Próximo fim de semana:</h2>
 
     <section class="next-card">
-      <div class="part-1" id="next-date">18 e 19 de Abril</div>
-      <div class="part-2" id="next-name">ALISSON</div>
-      <div class="part-3" id="next-status">CONFIRMADO</div>
+      <div class="part-1" id="next-date">Carregando...</div>
+      <div class="part-2" id="next-name">Carregando...</div>
+      <div class="part-3" id="next-status">Carregando...</div>
     </section>
 
     <div class="divider"></div>
@@ -277,24 +277,7 @@
   </main>
 
   <script>
-    const ADMIN_NUMBER = '5511984238923'; // troque pelo número da administradora
-
-    const weekends = [
-      { date: '02 e 03 de Maio', person: 'ADÉLIA', status: 'CONFIRMADO', color: 'green' },
-      { date: '09 e 10 de Maio', person: 'ALISSON', status: 'CONFIRMADO', color: 'green' },
-      { date: '16 e 17 de Maio', person: 'MICHELLE', status: 'CONFIRMADO', color: 'green' },
-      { date: '23 e 24 de Maio', person: 'MAURA', status: 'CONFIRMADO', color: 'green' },
-      { date: '30 e 31 de Maio', person: 'MARCELO', status: 'CONFIRMADO', color: 'green' },
-      { date: '06 e 07 de Junho', person: 'ALISSON', status: 'CONFIRMADO', color: 'green' },
-      { date: '13 e 14 de Junho', person: 'DIEGO', status: 'CONFIRMADO', color: 'green' },
-      { date: '20 e 21 de Junho', person: 'CÍNTIA', status: 'CONFIRMADO', color: 'green' },
-      { date: '27 e 28 de Junho', person: 'ADÉLIA', status: 'CONFIRMADO', color: 'green' },
-      { date: '04 e 05 de Julho', person: 'MICHELLE', status: 'CONFIRMADO', color: 'green' },
-      { date: '11 e 12 de Julho', person: 'MAURA', status: 'CONFIRMADO', color: 'green' },
-      { date: '18 e 19 de Julho', person: 'MARCELO', status: 'CONFIRMADO', color: 'green' },
-      { date: '25 e 26 de Julho', person: 'ALISSON', status: 'CONFIRMADO', color: 'green' },
-      { date: '01 e 02 de Agosto', person: 'DIEGO', status: 'CONFIRMADO', color: 'green' }
-    ];
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnOL1kJ-rfcGzWMZmbYKRbloHyf1E0ream8uer0JHxO_wozadJ1oWVz952dsAAzD1N/exec';
 
     const colorClassMap = {
       green: 'card-green',
@@ -304,54 +287,139 @@
 
     const cardsGrid = document.getElementById('cards-grid');
     const toggleButton = document.getElementById('toggle-cards');
-    const next = weekends[0];
-    const remainingWeekends = weekends.slice(1);
-    const initialVisibleCards = 3;
+    const waLink = document.getElementById('wa-link');
+    const nextDate = document.getElementById('next-date');
+    const nextName = document.getElementById('next-name');
+    const nextStatus = document.getElementById('next-status');
+
+    let weekends = [];
     let showingAllCards = false;
+    let initialVisibleCards = 3;
 
-    document.getElementById('next-date').textContent = next.date;
-    document.getElementById('next-name').textContent = next.person;
-    document.getElementById('next-status').textContent = next.status;
+    function normalizeDate(dateString) {
+      if (!dateString) return null;
+      const date = new Date(dateString + 'T00:00:00');
+      return isNaN(date.getTime()) ? null : date;
+    }
 
-    const defaultMessage = encodeURIComponent(
-      'Olá, preciso solicitar uma troca na escala da Lucimar.'
-    );
-    document.getElementById('wa-link').href = `https://wa.me/${ADMIN_NUMBER}?text=${defaultMessage}`;
+    function todayAtMidnight() {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
 
-    function renderCards() {
+    function updateWhatsApp(adminNumber, defaultMessage) {
+      const clean = String(adminNumber || '').replace(/\D/g, '');
+      const msg = encodeURIComponent(defaultMessage || 'Olá, preciso solicitar uma troca na escala da Lucimar.');
+
+      if (clean) {
+        waLink.href = 'https://wa.me/' + clean + '?text=' + msg;
+        waLink.style.opacity = '1';
+        waLink.style.pointerEvents = 'auto';
+      } else {
+        waLink.href = '#';
+        waLink.style.opacity = '.6';
+        waLink.style.pointerEvents = 'none';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderCards(list) {
       cardsGrid.innerHTML = '';
 
-      const list = showingAllCards
-        ? remainingWeekends
-        : remainingWeekends.slice(0, initialVisibleCards);
-
-      list.forEach(item => {
+      list.forEach(function(item) {
         const article = document.createElement('article');
-        article.className = `weekend-card ${colorClassMap[item.color] || 'card-green'}`;
-        article.innerHTML = `
-          <div class="line-1">${item.date}</div>
-          <div class="line-2">${item.person}</div>
-          <div class="line-3">${item.status}</div>
-        `;
+        article.className = 'weekend-card ' + (colorClassMap[item.color] || 'card-green');
+        article.innerHTML =
+          '<div class="line-1">' + escapeHtml(item.date) + '</div>' +
+          '<div class="line-2">' + escapeHtml(item.person) + '</div>' +
+          '<div class="line-3">' + escapeHtml(item.status) + '</div>';
         cardsGrid.appendChild(article);
       });
+    }
 
-      if (remainingWeekends.length <= initialVisibleCards) {
+    function renderPage() {
+      if (!weekends.length) {
+        nextDate.textContent = 'SEM ESCALA';
+        nextName.textContent = 'NENHUM FIM DE SEMANA DISPONÍVEL';
+        nextStatus.textContent = 'VERIFICAR PLANILHA';
+        cardsGrid.innerHTML = '';
+        toggleButton.style.display = 'none';
+        return;
+      }
+
+      const next = weekends[0];
+      nextDate.textContent = next.date || '';
+      nextName.textContent = next.person || '';
+      nextStatus.textContent = next.status || '';
+
+      const remaining = weekends.slice(1);
+      const visible = showingAllCards
+        ? remaining
+        : remaining.slice(0, initialVisibleCards);
+
+      renderCards(visible);
+
+      if (!remaining.length || remaining.length <= initialVisibleCards) {
         toggleButton.style.display = 'none';
       } else {
+        toggleButton.style.display = 'inline-flex';
         toggleButton.textContent = showingAllCards
           ? '▲ Mostrar só os próximos 3'
           : '▼ Ver mais finais de semana';
       }
     }
 
-    toggleButton.addEventListener('click', () => {
+    function renderEscalaFromSheet(data) {
+      updateWhatsApp(
+        data && data.adminNumber ? data.adminNumber : '',
+        data && data.defaultMessage ? data.defaultMessage : 'Olá, preciso solicitar uma troca na escala da Lucimar.'
+      );
+
+      initialVisibleCards = Number(data && data.initialCards ? data.initialCards : 3) || 3;
+
+      const today = todayAtMidnight();
+      const list = Array.isArray(data && data.weekends) ? data.weekends : [];
+
+      weekends = list
+        .filter(function(item) {
+          if (!item || !item.date || !item.person) return false;
+          const endDate = normalizeDate(item.endDate || item.startDate);
+          if (!endDate) return true;
+          return endDate >= today;
+        })
+        .sort(function(a, b) {
+          const dateA = normalizeDate(a.startDate || a.endDate || '');
+          const dateB = normalizeDate(b.startDate || b.endDate || '');
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA - dateB;
+        });
+
+      renderPage();
+    }
+
+    function loadEscala() {
+      const script = document.createElement('script');
+      const sep = APPS_SCRIPT_URL.indexOf('?') >= 0 ? '&' : '?';
+      script.src = APPS_SCRIPT_URL + sep + 'prefix=renderEscalaFromSheet&t=' + new Date().getTime();
+      document.body.appendChild(script);
+    }
+
+    toggleButton.addEventListener('click', function() {
       showingAllCards = !showingAllCards;
-      renderCards();
+      renderPage();
     });
 
-    renderCards();
+    loadEscala();
   </script>
 </body>
 </html>
-
